@@ -1,0 +1,5 @@
+read lexc < chu-morph.lexc ;
+define LEX ;
+source chu-morph-phon.xfst ;
+define RULES ;
+read regex LEX .o. RULES ;

@@ -1,0 +1,157 @@
+!
+! This file only contains a set of useful definitions. This is sourced
+! from the other scripts that generate useful automata.
+!
+
+!
+! Define some useful character classes
+!
+
+﻿! ăĂšŠĕĔüÜıİśŚčČ
+! ăĕıüčśš
+
+! Vowels
+define Vf   e | i | ĕ | ü | E | İ | Ĕ | Ü | %^sFRV | %^sFUV;
+define Vb   a | ı | ă | u | A | I | Ă | U | %^sBRV | %^sBUV;
+define Vsh	ă | ĕ | Ă | Ĕ ;
+define Vowel  Vf | Vb;
+define Vbuf %^%(I%) | %^%(A%) | %^%(Ă%) ;
+define Vxx  %^A | %^Ă | %^Ĕİ | %^I ;
+define Vsilent %^sFRV | %^sFUV | %^sBRV | %^sBUV ; 
+define Vall Vowel | Vxx | Vsilent; ! except buffer vowels
+define Vsurface   e | i | ö | ü | E | İ | Ö | Ü | î | Î |
+                  a | ı | o | u | A | I | O | U | â | Â | û | Û ;
+
+! Consonants
+define ConsV b | d | c | g | v | z | j | f | ğ | l | m | n | r | w | y | 
+           B | D | C | G | V | Z | J | F | Ğ | L | M | N | R | W | Y | %^sVC;
+define ConsUV p | t | ç | k | f | s | ş | h | ś | č |
+            P | T | Ç | K | F | S | Ş | H | Ś | Č | %^sUC;
+define Cons  ConsV | ConsUV;
+define ConsBuf %^%(N%) ;
+define ConsXX    %^c | %^p | %^t | %^k | %^g | %^K | %^D | %^C | %@LN | %^N;
+define ConsSilent %^sVC |  %^sUC;
+define ConsAll  Cons | ConsXX |ConsSilent; ! except buffers
+define ConsSurface b | d | c | g | v | z | j | f | ğ | l | m | n | r | w | y | 
+                   B | D | C | G | V | Z | J | F | Ğ | L | M | N | R | W | Y |
+                   p | t | ç | k | f | s | ş | h | 
+                   P | T | Ç | K | F | S | Ş | H ;
+
+define SilentLetter Vsilent | ConsSilent;
+define SurfaceLetter ConsSurface | Vsurface;
+
+! Intermediate symbols with no surface forms
+define Boundary %@MB | %@RB | %@dB ;
+define IntSym   Boundary | %@NCOMP | %@opt3 | %@APOS | %^NS | %^NNS | %@DUP%@ | %@ALTU%@ | %@DELV%@;
+
+define Digit %0|1|2|3|4|5|6|7|8|9;
+
+!
+! Buffer deletion
+!
+
+define DelBufVow [Vbuf -> 0 || [Vowel | Vxx ] [IntSym]* _ ] 
+             .o. [ %^%(Ă%) -> %^Ă ,
+                   %^%(A%) -> %^A ] ;
+define DelBufCons [ConsBuf -> 0 || [Cons | ConsXX | ă | ĕ ] [IntSym]* _ ] 
+             .o. [ %^%(N%) -> %^N ] ;
+
+define DelBuffers DelBufCons .o. DelBufVow ;
+
+!
+! Gen/Obj roots in -i n/y alternation
+!
+
+define NYAlternation [ %^N -> [y | 0] || i Boundary IntSym* _ ]
+										.o. %^N -> n , %^N -> 0;
+
+!
+! Loc/Abl r/t alternation
+!
+
+define RTCAlternation [ %^R -> n č || %^Ĕİ Boundary IntSym* _ ]
+										.o. [ %^R -> t , %^R2 -> č || [ l | n | r ] Boundary IntSym* _ ]
+										.o. %^R -> r , %^R2 -> r ;
+
+!
+! 3rd person possessive E/I alternation
+!
+
+define 3rdPersPossAlternation [ t -> č || _ [IntSym]* %^Ĕİ ,,
+																d -> č || _ [IntSym]* %^Ĕİ ]
+												.o.		[ %^Ĕİ -> ĕ || [Cons | ConsXX] [IntSym]* %@DELV%@ _ ,,
+																%^Ĕİ -> i || [Vowel | Vxx] [IntSym]* %@DELV%@ _ ] ;
+
+!
+! Delete final vowel in stem where marked
+!
+
+define FinalVowelDeletion [ Vowel -> 0 ||  _ Boundary %@DELV%@ ]
+                   .o. %@DELV%@ -> 0;
+
+!
+! Nouns in -u stem alternation
+!
+
+define UStemAlternation [ u -> ă v ||  _ Boundary %@ALTU%@ ,,
+													ü -> ĕ v ||  _ Boundary %@ALTU%@ ]
+                   .o. %@ALTU%@ -> 0;
+
+!
+! Nouns in -CA stem alternation (gemination)
+!
+
+define GemStemAlternation [ l -> l l || \ConsAll _ Vsh Boundary IntSym* %@DUP%@ ,,
+													  v -> v v || \ConsAll _ Vsh Boundary IntSym* %@DUP%@ ] 
+										.o.	[ Vsh -> 0 || ConsAll ConsAll _ Boundary IntSym* %@ALTĂ%@ ]
+										.o. %@DUP%@ -> 0 , %@ALTĂ%@ -> 0;
+
+!
+! Plural m/n alternation
+!
+
+define PluralAlternation [ %^M -> m || _ Boundary [p | .#.] ]
+										.o. %^M -> n ;
+
+!
+! Negative present s/0 alternation
+!
+
+define NegPresSAlternation [ %^S -> 0 || _ Boundary IntSym* ś ]
+										.o. %^S -> s ;
+
+
+!
+! Vowel Harmony
+!
+
+define VowelHarmony [ %^A -> a  //  Vb  \Vall* _  ,,
+                      %^A -> e  //  Vf	\Vall* _  ,,
+											%^Ă -> ă  //  Vb  \Vall* _  ,,
+                      %^Ă -> ĕ  //  Vf	\Vall* _  ,,
+											%^U -> u  //  Vb  \Vall* _  ,,
+											%^U -> ü  //  Vf  \Vall* _ ];
+
+!
+! Delete morpheme boundaries
+!
+
+define DeleteBoundary ["@MB" | "@RB"] -> 0 ;
+
+
+
+
+read regex GemStemAlternation
+						.o. UStemAlternation
+						.o. DelBufCons
+						.o. NYAlternation
+						.o. DelBufVow
+						.o. RTCAlternation
+						.o. 3rdPersPossAlternation
+						.o. FinalVowelDeletion
+						.o. PluralAlternation
+						.o. NegPresSAlternation
+						.o. VowelHarmony
+						.o. DeleteBoundary
+						;
+
